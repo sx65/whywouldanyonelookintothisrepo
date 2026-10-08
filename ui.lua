@@ -1998,6 +1998,263 @@ do
         return Button;
     end;
 
+    function Funcs:AddTextBox(Idx, Info)
+        local Groupbox = self;
+        local Container = Groupbox.Container;
+        Info = Info or {};
+
+        local TextBoxObj = {
+            Value = Info.Default or '';
+            Type = 'TextBox';
+            Callback = Info.Callback or function() end;
+        };
+
+        local Row = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, -4, 0, 20);
+            Parent = Container;
+        });
+
+        Library:CreateLabel({
+            Size = UDim2.new(0.4, -4, 1, 0);
+            TextSize = Library.FontSize;
+            Text = Info.Text or '';
+            TextXAlignment = Enum.TextXAlignment.Left;
+            Parent = Row;
+        });
+
+        local Box = Library:Create('TextBox', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Position = UDim2.new(0.4, 0, 0, 0);
+            Size = UDim2.new(0.6, 0, 1, 0);
+            Font = Library.Font;
+            TextSize = Library.FontSize;
+            TextColor3 = Library.FontColor;
+            Text = Info.Default or '';
+            PlaceholderText = Info.Placeholder or '';
+            PlaceholderColor3 = Color3.fromRGB(150, 150, 150);
+            ClearTextOnFocus = false;
+            TextXAlignment = Enum.TextXAlignment.Left;
+            Parent = Row;
+        });
+        Library:AddToRegistry(Box, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+            TextColor3 = 'FontColor';
+        });
+        Library:ApplyTextStroke(Box);
+
+        Box.FocusLost:Connect(function()
+            TextBoxObj.Value = Box.Text;
+            Library:SafeCallback(TextBoxObj.Callback, TextBoxObj.Value);
+        end);
+
+        function TextBoxObj:SetValue(Text)
+            Box.Text = Text;
+            self.Value = Text;
+        end;
+
+        if Idx then
+            Options[Idx] = TextBoxObj;
+        end;
+
+        Groupbox:AddBlank(5);
+        Groupbox:Resize();
+        return TextBoxObj;
+    end;
+
+    -- virtualized icon grid with search + preview slot; only MaxCards exist at any time
+    function Funcs:AddSkinGrid(Info)
+        local Groupbox = self;
+        local Container = Groupbox.Container;
+        Info = Info or {};
+
+        local Height = Info.Height or 470;
+        local ItemWidth = Info.ItemWidth or 84;
+        local ItemHeight = Info.ItemHeight or 108;
+        local MaxCards = Info.MaxCards or 80;
+
+        local Outer = Library:Create('Frame', {
+            BackgroundTransparency = 1;
+            Size = UDim2.new(1, -4, 0, Height);
+            Parent = Container;
+        });
+
+        local Title = Library:CreateLabel({
+            Size = UDim2.new(1, 0, 0, 15);
+            TextSize = Library.FontSize;
+            Text = Info.Text or 'Skin Grid';
+            TextXAlignment = Enum.TextXAlignment.Left;
+            Parent = Outer;
+        });
+
+        local SearchBox = Library:Create('TextBox', {
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Position = UDim2.new(0, 0, 0, 18);
+            Size = UDim2.new(1, 0, 0, 20);
+            Font = Library.Font;
+            TextSize = Library.FontSize;
+            TextColor3 = Library.FontColor;
+            PlaceholderText = Info.Placeholder or 'search...';
+            PlaceholderColor3 = Color3.fromRGB(150, 150, 150);
+            ClearTextOnFocus = false;
+            TextXAlignment = Enum.TextXAlignment.Left;
+            Parent = Outer;
+        });
+        Library:AddToRegistry(SearchBox, {
+            BackgroundColor3 = 'MainColor';
+            BorderColor3 = 'OutlineColor';
+            TextColor3 = 'FontColor';
+        });
+        Library:ApplyTextStroke(SearchBox);
+
+        local Grid = Library:Create('ScrollingFrame', {
+            Position = UDim2.new(0, 0, 0, 42);
+            Size = UDim2.new(0.58, -4, 1, -42);
+            BackgroundColor3 = Library.BackgroundColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            ScrollBarThickness = 4;
+            AutomaticCanvasSize = Enum.AutomaticSize.Y;
+            CanvasSize = UDim2.new(0, 0, 0, 0);
+            Parent = Outer;
+        });
+        Library:Create('UIGridLayout', {
+            CellSize = UDim2.new(0, ItemWidth, 0, ItemHeight);
+            CellPadding = UDim2.new(0, 5, 0, 5);
+            SortOrder = Enum.SortOrder.LayoutOrder;
+            Parent = Grid;
+        });
+
+        local Preview = Library:Create('ViewportFrame', {
+            Position = UDim2.new(0.58, 4, 0, 42);
+            Size = UDim2.new(0.42, -4, 0, math.floor(Height * 0.42));
+            BackgroundColor3 = Library.MainColor;
+            BorderColor3 = Library.OutlineColor;
+            BorderMode = Enum.BorderMode.Inset;
+            Parent = Outer;
+        });
+
+        local MetaLabel = Library:CreateLabel({
+            Position = UDim2.new(0.58, 6, 0, 46 + math.floor(Height * 0.42));
+            Size = UDim2.new(0.42, -10, 0, 15);
+            TextSize = Library.FontSize - 1;
+            Text = '';
+            TextXAlignment = Enum.TextXAlignment.Left;
+            Parent = Outer;
+        });
+
+        local DescLabel = Library:CreateLabel({
+            Position = UDim2.new(0.58, 6, 0, 64 + math.floor(Height * 0.42));
+            Size = UDim2.new(0.42, -10, 1, -(68 + math.floor(Height * 0.42)));
+            TextSize = Library.FontSize - 2;
+            Text = '';
+            TextWrapped = true;
+            TextXAlignment = Enum.TextXAlignment.Left;
+            TextYAlignment = Enum.TextYAlignment.Top;
+            Parent = Outer;
+        });
+
+        local GridObj = {
+            Type = 'SkinGrid';
+            Items = Info.Items or {};
+            Selected = nil;
+            Preview = Preview;
+            Callback = Info.Callback or function() end;
+        };
+
+        local pool = {};
+        local selectedStroke = nil;
+
+        local function make_card()
+            local Button = Library:Create('TextButton', {
+                BackgroundColor3 = Library.MainColor;
+                BorderColor3 = Library.OutlineColor;
+                Text = '';
+                AutoButtonColor = true;
+                Size = UDim2.new(0, ItemWidth, 0, ItemHeight);
+                Parent = Grid;
+            });
+            local Icon = Library:Create('ImageLabel', {
+                Size = UDim2.new(1, -6, 0, ItemHeight - 34);
+                Position = UDim2.new(0, 3, 0, 3);
+                BackgroundTransparency = 1;
+                ScaleType = Enum.ScaleType.Fit;
+                Parent = Button;
+            });
+            local Label = Library:CreateLabel({
+                Size = UDim2.new(1, -6, 0, 26);
+                Position = UDim2.new(0, 3, 1, -29);
+                TextSize = Library.FontSize - 3;
+                TextWrapped = true;
+                Text = '';
+                Parent = Button;
+            });
+            local card = { Button = Button, Icon = Icon, Label = Label, Item = nil };
+            Button.Activated:Connect(function()
+                if not card.Item then return end;
+                if selectedStroke then
+                    selectedStroke.BorderColor3 = Library.OutlineColor;
+                end;
+                Button.BorderColor3 = Library.AccentColor;
+                selectedStroke = Button;
+                GridObj.Selected = card.Item;
+                Library:SafeCallback(GridObj.Callback, card.Item);
+            end);
+            return card;
+        end;
+
+        function GridObj.Rebuild(self)
+            local query = string.lower(SearchBox.Text or '');
+            local shown = 0;
+            for _, card in ipairs(pool) do
+                card.Button.Visible = false;
+            end;
+            for index, item in ipairs(self.Items) do
+                if shown >= MaxCards then break end;
+                local hay = string.lower(tostring(item.display or item.name or '') .. ' ' .. tostring(item.rarity or ''));
+                if query == '' or string.find(hay, query, 1, true) then
+                    shown += 1;
+                    local card = pool[shown];
+                    if not card then
+                        card = make_card();
+                        pool[shown] = card;
+                    end;
+                    card.Button.Visible = true;
+                    card.Button.LayoutOrder = index;
+                    card.Item = item;
+                    card.Label.Text = item.display or item.name or '?';
+                    card.Icon.Image = item.icon or '';
+                end;
+            end;
+            Title.Text = string.format('%s (%d)', Info.Text or 'Skin Grid', shown);
+        end;
+
+        function GridObj.SetItems(self, Items)
+            self.Items = Items or {};
+            self:Rebuild();
+        end;
+
+        function GridObj.SetMeta(self, Meta, Description)
+            MetaLabel.Text = Meta or '';
+            DescLabel.Text = Description or '';
+        end;
+
+        SearchBox:GetPropertyChangedSignal('Text'):Connect(function()
+            GridObj:Rebuild();
+        end);
+
+        GridObj:Rebuild();
+
+        Groupbox:AddBlank(4);
+        Groupbox:Resize();
+        return GridObj;
+    end;
+
     function Funcs:AddDivider()
         local Groupbox = self;
         local Container = self.Container
